@@ -7,18 +7,24 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,8 +37,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dutch.forzagaugetelemetry.ui.theme.ForzaGaugeTelemetryTheme
@@ -101,13 +107,25 @@ class MainActivity : ComponentActivity() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 32.dp, start = 24.dp, end = 24.dp, bottom = 64.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
+                .padding(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 64.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            RaceStatusIndicator(isRaceOn = telemetry.isRaceOn)
+
             GearAndSpeedSection(telemetry = telemetry)
-            RpmProgressBar(telemetry = telemetry, modifier = Modifier.fillMaxWidth())
-            MetricsGrid(telemetry = telemetry)
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Spacer(modifier = Modifier.width(16.dp))
+                MetricsGrid(telemetry = telemetry, modifier = Modifier.weight(0.6f))
+            }
         }
     }
 
@@ -116,148 +134,331 @@ class MainActivity : ComponentActivity() {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 24.dp, start = 32.dp, end = 32.dp, bottom = 64.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterHorizontally as Alignment.Vertical
+                .padding(top = 24.dp, start = 32.dp, end = 32.dp, bottom = 48.dp),
+            horizontalArrangement = Arrangement.spacedBy(32.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-
-
+                RaceStatusIndicator(isRaceOn = telemetry.isRaceOn)
+                Spacer(modifier = Modifier.height(16.dp))
                 GearAndSpeedSection(telemetry = telemetry)
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             Column(
-                modifier = Modifier.weight(1.2f),
+                modifier = Modifier.weight(1.3f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                RpmProgressBar(telemetry = telemetry, modifier = Modifier.fillMaxWidth(0.9f))
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Spacer(modifier = Modifier.height(24.dp))
-                MetricsGrid(telemetry = telemetry)
+                MetricsGrid(telemetry = telemetry, modifier = Modifier.fillMaxWidth())
             }
         }
     }
 
+    @Composable
+    fun RaceStatusIndicator(isRaceOn: Boolean) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(if (isRaceOn) Color(0xFF00E676) else Color(0xFFFF1744))
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = if (isRaceOn) "RACE LIVE" else "RACE PAUSED",
+                color = if (isRaceOn) Color(0xFF00E676) else Color(0xFFFF1744),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace
+            )
+        }
+    }
 
     @Composable
     fun GearAndSpeedSection(telemetry: ForzaTelemetry) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Core Gear Indicator
-            Text(
-                text = when (telemetry.gear) {
-                    0 -> "R"
-                    11 -> "N"
-                    else -> telemetry.gear.toString()
-                },
-                color = if (telemetry.currentEngineRpm >= telemetry.engineMaxRpm * 0.92f) Color(
-                    0xFFFF1744
-                ) else Color(0xFFFFCC00),
-                fontSize = 110.sp,
-                fontWeight = FontWeight.Black,
-                fontFamily = FontFamily.Monospace,
-                lineHeight = 110.sp
-            )
+        val isRedline =
+            telemetry.engineMaxRpm > 0 && telemetry.currentEngineRpm >= telemetry.engineMaxRpm * 0.92f
+        val gearText = when (telemetry.gear) {
+            0 -> "R"
+            11 -> "N"
+            else -> telemetry.gear.toString()
+        }
+        val speedText = telemetry.speedKmh.toString()
 
-            // Speed Display
-            Row(verticalAlignment = Alignment.Bottom) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(
+                verticalAlignment = Alignment.Bottom, modifier = Modifier.wrapContentHeight()
+            ) {
                 Text(
-                    text = telemetry.speedKmh.toString(),
-                    color = Color.White,
-                    fontSize = 54.sp,
+                    text = gearText,
+                    color = Color.White.copy(alpha = 0.40f),
+                    fontSize = 72.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
-                    lineHeight = 54.sp
+                    fontStyle = FontStyle.Italic,
+                    fontFamily = FontFamily.SansSerif,
+                    modifier = Modifier.offset(y = (-10).dp)
                 )
+                Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = " KM/H",
-                    color = Color.DarkGray,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    fontFamily = FontFamily.Monospace
+                    text = speedText,
+                    color = if (isRedline) Color(0xFFFF1744) else Color.White,
+                    fontSize = 130.sp,
+                    fontWeight = FontWeight.Black,
+                    fontStyle = FontStyle.Italic,
+                    fontFamily = FontFamily.SansSerif,
+                    lineHeight = 110.sp,
+                    letterSpacing = (-4).sp
                 )
             }
+            Text(
+                text = "KM/H",
+                color = Color.Gray,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.offset(y = (-10).dp)
+            )
+            RpmProgressBar(telemetry = telemetry, modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.height(12.dp))
+            SteerIndicator(steer = telemetry.steer, modifier = Modifier.fillMaxWidth(0.5f))
         }
     }
 
     @Composable
     fun RpmProgressBar(telemetry: ForzaTelemetry, modifier: Modifier = Modifier) {
         val rpmProgress =
-            if (telemetry.engineMaxRpm > 0) telemetry.currentEngineRpm / telemetry.engineMaxRpm else 0f
+            if (telemetry.engineMaxRpm > 0) (telemetry.currentEngineRpm / telemetry.engineMaxRpm).coerceIn(
+                0f, 1f
+            ) else 0f
+        val redlineStart = 0.85f
 
-        // Dynamic color shifting based on engine workload thresholds
-        val barColor = when {
-            rpmProgress > 0.92f -> Color(0xFFFF1744) // Redline limit warning
-            rpmProgress > 0.75f -> Color(0xFFFFEA00) // Optimal shifting window
-            else -> Color(0xFF00E676)                // Safe range linear acceleration
+        val skewedShape = GenericShape { size, _ ->
+            val skewWidth = size.height * 0.4f
+            moveTo(skewWidth, 0f)
+            lineTo(size.width, 0f)
+            lineTo(size.width - skewWidth, size.height)
+            lineTo(0f, size.height)
+            close()
         }
 
-        Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(modifier = modifier) {
             Row(
-                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
             ) {
                 Text(
-                    text = "${telemetry.currentEngineRpm.toInt()} RPM",
-                    color = Color.LightGray,
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace
+                    text = "${telemetry.currentEngineRpm.toInt()}",
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.SansSerif,
+                    fontStyle = FontStyle.Italic
                 )
                 Text(
-                    text = "LIMIT: ${telemetry.engineMaxRpm.toInt()}",
-                    color = Color.DarkGray,
-                    fontSize = 12.sp,
+                    text = "RPM",
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace
                 )
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            LinearProgressIndicator(
-                progress = { rpmProgress.coerceIn(0f, 1f) },
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(14.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = barColor,
-                trackColor = Color(0xFF1F1F1F)
+                    .height(16.dp)
+                    .clip(skewedShape)
+                    .background(Color.White.copy(alpha = 0.1f))
+            ) {
+                // Redline area
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(1f - redlineStart)
+                        .fillMaxHeight()
+                        .align(Alignment.CenterEnd)
+                        .background(Color(0xFFE91E63).copy(alpha = 0.3f))
+                )
+
+                // Progress
+                if (rpmProgress > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(rpmProgress)
+                            .fillMaxHeight()
+                            .background(
+                                if (rpmProgress > redlineStart) Color(0xFFE91E63)
+                                else Color.White.copy(alpha = 0.7f)
+                            )
+                    )
+
+                    // Needle/Indicator line
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(rpmProgress)
+                            .fillMaxHeight()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(2.5.dp)
+                                .fillMaxHeight()
+                                .background(Color.White)
+                                .align(Alignment.CenterEnd)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun SteerIndicator(steer: Int, modifier: Modifier = Modifier) {
+        Box(
+            modifier = modifier
+                .height(4.dp)
+                .background(Color(0xFF333333), RoundedCornerShape(2.dp))
+        ) {
+            val steerNormalized = (steer.toFloat() / 127f).coerceIn(-1f, 1f)
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(12.dp)
+                    .align(Alignment.Center)
+                    .offset(x = (steerNormalized * 50).dp)
+                    .background(Color.White, RoundedCornerShape(1.dp))
+            )
+        }
+    }
+
+
+    @Composable
+    fun TireBox(temp: Float) {
+        val color = when {
+            temp > 95 -> Color(0xFFFF1744)
+            temp > 85 -> Color(0xFFFF9100)
+            temp > 70 -> Color(0xFF00E676)
+            temp > 40 -> Color(0xFF2979FF)
+            else -> Color(0xFF333333)
+        }
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(width = 32.dp, height = 44.dp)
+                .background(Color(0xFF1A1A1A), RoundedCornerShape(4.dp))
+                .border(1.dp, color, RoundedCornerShape(4.dp))
+        ) {
+            Text(
+                temp.toInt().toString(),
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
 
     @Composable
-    fun MetricsGrid(telemetry: ForzaTelemetry) {
-        Row(
-            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround
+    fun MetricsGrid(telemetry: ForzaTelemetry, modifier: Modifier = Modifier) {
+        Column(
+            modifier = modifier.wrapContentHeight(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            StatBox(label = "THROTTLE", value = "${((telemetry.accel / 255f) * 100).toInt()}%")
-            StatBox(label = "BRAKE", value = "${((telemetry.brake / 255f) * 100).toInt()}%")
-            StatBox(label = "BOOST", value = String.format("%.1f PSI", telemetry.boostPsi))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatBox(
+                    modifier = Modifier.weight(1f),
+                    label = "THR",
+                    value = "${((telemetry.accel / 255f) * 100).toInt()}%",
+                    color = Color(0xFF00E676)
+                )
+                StatBox(
+                    modifier = Modifier.weight(1f),
+                    label = "BRK",
+                    value = "${((telemetry.brake / 255f) * 100).toInt()}%",
+                    color = Color(0xFFFF1744)
+                )
+                StatBox(
+                    modifier = Modifier.weight(1f),
+                    label = "BST",
+                    value = String.format("%.1f", telemetry.boostPsi)
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatBox(
+                    modifier = Modifier.weight(1f), label = "PWR", value = "${telemetry.horsepower}"
+                )
+                StatBox(
+                    modifier = Modifier.weight(1f),
+                    label = "TRQ",
+                    value = "${telemetry.torqueNm.toInt()}"
+                )
+                StatBox(
+                    modifier = Modifier.weight(1f),
+                    label = "AFR",
+                    value = String.format("%.1f", telemetry.fuelRatio)
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatBox(
+                    modifier = Modifier.weight(1f), label = "LAP", value = "${telemetry.lapNumber}"
+                )
+                StatBox(
+                    modifier = Modifier.weight(1f),
+                    label = "POS",
+                    value = "${telemetry.racePosition}"
+                )
+                StatBox(
+                    modifier = Modifier.weight(1f),
+                    label = "G-LAT",
+                    value = String.format("%.2f", telemetry.accelX / 9.81f)
+                )
+            }
         }
     }
 
     @Composable
-    fun StatBox(label: String, value: String) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    fun StatBox(
+        label: String, value: String, modifier: Modifier = Modifier, color: Color = Color.White
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier
+                .background(Color(0xFF1A1A1A), RoundedCornerShape(8.dp))
+                .padding(vertical = 6.dp)
+        ) {
             Text(
-                text = label,
-                color = Color.DarkGray,
-                fontSize = 11.sp,
+                label,
+                color = Color.Gray,
+                fontSize = 8.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace
             )
-            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = value,
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
+                value,
+                color = color,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
                 fontFamily = FontFamily.Monospace
             )
         }
     }
-
 
     @Composable
     fun ConnectionInfoOverlay(ip: String, port: Int, modifier: Modifier = Modifier) {
@@ -270,14 +471,14 @@ class MainActivity : ComponentActivity() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "FORZA DATA IN: ",
+                "DATA IN: ",
                 color = Color.DarkGray,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace
             )
             Text(
-                text = "$ip : $port",
+                "$ip : $port",
                 color = Color.LightGray,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
@@ -285,6 +486,4 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
-
-
 }
