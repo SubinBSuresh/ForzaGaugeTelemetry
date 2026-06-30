@@ -1,5 +1,7 @@
 # ForzaGaugeTelemetry
 
+https://medium.com/@subin.bsuresh27/building-a-real-time-forza-dashboard-for-android-583eb1cded42
+
 An Android app that turns your phone into a live digital instrument cluster for *Forza Horizon*. It connects to your PC or Xbox over Wi-Fi, reads the game's live telemetry stream at 60+ FPS, and updates the UI instantly using Jetpack Compose.
 
 The app is built to be completely lightweight. It reuses a single memory buffer to read the incoming network data, which prevents memory allocation spikes and eliminates screen stutters while you are driving.
